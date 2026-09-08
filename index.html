@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZCredit — Money Life</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" onclick="showPage('home')">
+      <span class="brand-mark">Z</span>
+      <span>ZCredit</span>
+      <small>by Money Life</small>
+    </a>
+    <nav>
+      <button onclick="showPage('home')">Home</button>
+      <button onclick="showPage('request')">Request Money</button>
+      <button onclick="showPage('dashboard')">My Account / Dashboard</button>
+      <button id="authNav" onclick="showPage('auth')">Login / Sign Up</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="home" class="page active">
+      <div class="hero">
+        <div class="hero-copy">
+          <span class="eyebrow">MONEY LIFE • DIGITAL FINANCE</span>
+          <h1>Your money.<br><span>Your ZCredit.</span></h1>
+          <p>Manage your fictional Money Life balance, send money to other users, and keep your ZCredit card in one simple place.</p>
+          <div class="hero-actions">
+            <button class="primary" onclick="showPage('dashboard')">Open My Dashboard</button>
+            <button class="secondary" onclick="showPage('request')">Request a Balance</button>
+          </div>
+          <div class="trust-row">
+            <span>✓ Simple transfers</span>
+            <span>✓ Transaction history</span>
+            <span>✓ Money Life compatible</span>
+          </div>
+        </div>
+        <div class="hero-card-wrap">
+          <div class="credit-card">
+            <div class="card-top">
+              <span class="mini-brand">ZCredit</span>
+              <span class="chip"></span>
+            </div>
+            <div class="card-number" id="heroCardNumber">5428 9012 3476 1208</div>
+            <div class="card-bottom">
+              <div><small>CARDHOLDER</small><strong id="heroCardName">YOUR NAME</strong></div>
+              <div><small>VALID THRU</small><strong>09/30</strong></div>
+              <div class="contactless">)))</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">
+        <span class="eyebrow">ONE ACCOUNT</span>
+        <h2>Everything you need for Money Life.</h2>
+      </div>
+      <div class="feature-grid">
+        <article><div class="icon">💳</div><h3>Your ZCredit Card</h3><p>A clean, classic digital card with your name and automatically generated card number.</p></article>
+        <article><div class="icon">💰</div><h3>Digital Balance</h3><p>Give fictional Euros to Zaual IRL and have the matching amount added to your balance.</p></article>
+        <article><div class="icon">↗</div><h3>Send Money</h3><p>Transfer your ZCredit balance to another Money Life user using their username.</p></article>
+      </div>
+    </section>
+
+    <section id="request" class="page">
+      <div class="page-heading">
+        <span class="eyebrow">BALANCE REQUEST</span>
+        <h1>Add money to your ZCredit.</h1>
+        <p>Have fictional Money Life Euros in real life? Give them to Zaual, and the same amount can be added to your ZCredit balance.</p>
+      </div>
+      <div class="request-layout">
+        <div class="panel form-panel">
+          <h2>Request a balance</h2>
+          <label for="requestAmount">Amount in fictional Euros</label>
+          <div class="money-input"><span>€</span><input id="requestAmount" type="number" min="1" placeholder="0.00"></div>
+          <button class="primary full" onclick="submitRequest()">Submit Request</button>
+          <p class="form-note">This is a fictional Money Life system. No real payment is processed by this website.</p>
+          <div id="requestMessage" class="message"></div>
+        </div>
+        <div class="panel info-panel">
+          <span class="step">HOW IT WORKS</span>
+          <div class="step-row"><b>01</b><span>Enter the amount of fictional Euros you have.</span></div>
+          <div class="step-row"><b>02</b><span>Give that physical fictional cash to Zaual IRL.</span></div>
+          <div class="step-row"><b>03</b><span>Zaual adds the matching amount to your ZCredit balance.</span></div>
+        </div>
+      </div>
+    </section>
+
+
+    <section id="auth" class="page">
+      <div class="page-heading">
+        <span class="eyebrow">ZCREDIT ACCOUNT</span>
+        <h1>Create your account.</h1>
+        <p>Sign up or log in to keep your ZCredit account and transactions synced with Supabase.</p>
+      </div>
+      <div class="request-layout">
+        <div class="panel form-panel">
+          <h2 id="authTitle">Create account</h2>
+          <label>Email</label>
+          <input id="authEmail" type="email" placeholder="you@example.com">
+          <label>Password</label>
+          <input id="authPassword" type="password" placeholder="At least 6 characters">
+          <label id="authNameLabel">Cardholder name</label>
+          <input id="authName" type="text" placeholder="Your name">
+          <button class="primary full" id="authButton" onclick="handleAuth()">Create Account</button>
+          <button class="secondary full" onclick="toggleAuthMode()" id="authToggle">Already have an account? Log in</button>
+          <div id="authMessage" class="message"></div>
+        </div>
+        <div class="panel info-panel">
+          <span class="step">SECURE ACCOUNT DATA</span>
+          <div class="step-row"><b>01</b><span>Your login is handled by Supabase Auth.</span></div>
+          <div class="step-row"><b>02</b><span>Your profile, card and transactions are stored in Supabase.</span></div>
+          <div class="step-row"><b>03</b><span>Only your own account data is loaded by the website.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="dashboard" class="page">
+      <div class="dashboard-heading">
+        <div>
+          <span class="eyebrow">MY ACCOUNT</span>
+          <h1>Good to see you, <span id="dashName">there</span>.</h1>
+        </div>
+        <div><button class="secondary" onclick="showPage('request')">+ Request Money</button> <button class="secondary" onclick="signOut()">Sign out</button></div>
+      </div>
+
+      
+      <div class="panel form-panel" id="cardSetupPanel" style="margin-bottom:18px;display:none">
+        <h2>Create your ZCredit card</h2>
+        <p class="form-note">Enter your cardholder name. The card number is generated automatically.</p>
+        <label>Cardholder name</label>
+        <input id="setupName" type="text" placeholder="Your name">
+        <button class="primary" onclick="createCard()">Create ZCredit Card</button>
+        <div id="cardSetupMessage" class="message"></div>
+      </div>
+
+      <div class="balance-grid">
+        <div class="panel balance-card">
+          <span>Current Balance</span>
+          <strong id="balanceDisplay">€0.00</strong>
+          <small>Fictional Money Life Euros</small>
+        </div>
+        <div class="panel available-card">
+          <span>Available Balance</span>
+          <strong id="availableDisplay">€0.00</strong>
+          <small>No credit limit</small>
+        </div>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="panel card-panel">
+          <div class="panel-header"><h2>ZCredit Card</h2><span class="status"><i></i> Active</span></div>
+          <div class="credit-card small-card">
+            <div class="card-top"><span class="mini-brand">ZCredit</span><span class="chip"></span></div>
+            <div class="card-number" id="dashCardNumber">5428 9012 3476 1208</div>
+            <div class="card-bottom"><div><small>CARDHOLDER</small><strong id="dashCardName">YOUR NAME</strong></div><div><small>VALID THRU</small><strong id="dashExpiry">09/30</strong></div></div>
+          </div>
+          <div class="card-details">
+            <div><span>Cardholder</span><b id="detailName">YOUR NAME</b></div>
+            <div><span>Card number</span><b id="detailNumber">5428 9012 3476 1208</b></div>
+            <div><span>Expiration</span><b id="detailExpiry">09/30</b></div>
+          </div>
+        </div>
+
+        <div class="panel transfer-panel">
+          <div class="panel-header"><h2>Send Money</h2><span class="tiny">To a username</span></div>
+          <label>Recipient username</label>
+          <input id="recipient" type="text" placeholder="@username">
+          <label>Amount</label>
+          <div class="money-input"><span>€</span><input id="transferAmount" type="number" min="0.01" step="0.01" placeholder="0.00"></div>
+          <button class="primary full" onclick="sendMoney()">Transfer Money</button>
+          <div id="transferMessage" class="message"></div>
+        </div>
+      </div>
+
+      <div class="panel history-panel">
+        <div class="panel-header"><h2>Transaction History</h2><span class="tiny">Recent activity</span></div>
+        <div id="transactions"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div><b>ZCredit</b> by Money Life</div>
+    <span>Fictional financial system • Not real money</span>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
