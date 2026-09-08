@@ -93,22 +93,45 @@ function updateHero(){
 }
 
 async function createCard(){
-  if(!currentUser){showPage("auth");return;}
+  if(!currentUser){
+    showPage("auth");
+    return;
+  }
+
   const name=document.getElementById("setupName").value.trim();
   const msg=document.getElementById("cardSetupMessage");
-  if(!name){msg.textContent="Enter a cardholder name.";msg.style.color="#b44747";return;}
+
+  if(!name){
+    msg.textContent="Enter a cardholder name.";
+    msg.style.color="#b44747";
+    return;
+  }
+
   state.name=name;
   state.number=generateCardNumber();
   state.expiry="09/30";
-  const {error}=await supabaseClient.from("profiles").upsert({
-    id:currentUser.id, cardholder_name:state.name,
-    card_number:state.number, expiry:state.expiry
-  });
-  if(error){msg.textContent=error.message;msg.style.color="#b44747";return;}
+
+  const {error}=await supabaseClient
+    .from("profiles")
+    .update({
+      cardholder_name: state.name,
+      card_number: state.number,
+      expiry: state.expiry
+    })
+    .eq("id", currentUser.id);
+
+  if(error){
+    msg.textContent=error.message;
+    msg.style.color="#b44747";
+    return;
+  }
+
   msg.textContent="Your ZCredit card has been created.";
   msg.style.color="#287548";
+
   updateHero();
   renderDashboard();
+}
 }
 
 function renderDashboard(){
