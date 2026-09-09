@@ -6,6 +6,7 @@ const state = {
   number: "",
   expiry: "09/30",
   balance: 0,
+  username: "",
   transactions: []
 };
 
@@ -78,6 +79,7 @@ async function loadUser(){
     state.number=profile.card_number || "";
     state.expiry=profile.expiry || "09/30";
     state.balance=Number(profile.balance || 0);
+    state.username=profile.username || "";
   }
   const {data:tx}=await supabaseClient.from("transactions").select("*").eq("user_id",user.id).order("created_at",{ascending:true});
   state.transactions=(tx||[]).map(t=>({
@@ -142,6 +144,7 @@ function renderDashboard(){
   document.getElementById("cardSetupPanel").style.display=hasCard?"none":"block";
   const name=state.name || "YOUR NAME";
   document.getElementById("dashName").textContent=name==="YOUR NAME"?"there":name.split(" ")[0];
+  document.getElementById("usernameInput").value=state.username||"";
   document.getElementById("balanceDisplay").textContent=money(state.balance);
   document.getElementById("availableDisplay").textContent=money(state.balance);
   ["dashCardName","detailName"].forEach(id=>document.getElementById(id).textContent=name);
@@ -192,6 +195,40 @@ async function sendMoney(){
   msg.style.color="#287548";
   document.getElementById("recipient").value="";
   document.getElementById("transferAmount").value="";
+}
+
+async function updateUsername(){
+  if(!currentUser){showPage("auth");return;}
+  const msg=document.getElementById("usernameMessage");
+  const newUsername=document.getElementById("usernameInput").value.trim().toLowerCase();
+
+  if(!newUsername){msg.textContent="Enter a username.";msg.style.color="#b44747";return;}
+  if(!/^[a-z0-9_]{3,20}$/.test(newUsername)){
+    msg.textContent="Use 3-20 characters: letters, numbers, or underscores only.";
+    msg.style.color="#b44747";
+    return;
+  }
+  if(newUsername===state.username){
+    msg.textContent="That's already your username.";
+    msg.style.color="#65707c";
+    return;
+  }
+
+  msg.textContent="Saving...";
+  const {error}=await supabaseClient.from("profiles").update({username:newUsername}).eq("id",currentUser.id);
+  if(error){
+    if(error.code==="23505" || /duplicate/i.test(error.message)){
+      msg.textContent="That username is already taken.";
+    }else{
+      msg.textContent=error.message;
+    }
+    msg.style.color="#b44747";
+    return;
+  }
+
+  state.username=newUsername;
+  msg.textContent="Username updated.";
+  msg.style.color="#287548";
 }
 
 async function signOut(){

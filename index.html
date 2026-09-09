@@ -176,6 +176,15 @@
         </div>
       </div>
 
+      <div class="panel form-panel" id="usernamePanel" style="margin-bottom:18px">
+        <div class="panel-header"><h2>Account Settings</h2><span class="tiny">Your username</span></div>
+        <p class="form-note">Other Money Life users need this to send you money. Change it any time — no need to ask an admin.</p>
+        <label for="usernameInput">Username</label>
+        <input id="usernameInput" type="text" placeholder="username">
+        <button class="primary" onclick="updateUsername()">Save Username</button>
+        <div id="usernameMessage" class="message"></div>
+      </div>
+
       <div class="panel history-panel">
         <div class="panel-header"><h2>Transaction History</h2><span class="tiny">Recent activity</span></div>
         <div id="transactions"></div>
