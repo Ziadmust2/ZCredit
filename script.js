@@ -132,7 +132,6 @@ async function createCard(){
   updateHero();
   renderDashboard();
 }
-}
 
 function renderDashboard(){
   if(!currentUser){
