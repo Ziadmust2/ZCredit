@@ -67,12 +67,15 @@ async function loadDeposits(){
     .order("created_at",{ascending:true});
   if(error){list.innerHTML=`<div class="empty">${escapeHtml(error.message)}</div>`;return;}
   depositCache=data||[];
+  document.getElementById("depositCount").textContent=depositCache.length?`${depositCache.length} pending`:"All caught up";
   if(!depositCache.length){list.innerHTML='<div class="empty">No pending deposit requests.</div>';return;}
   list.innerHTML=depositCache.map(r=>`
     <div class="request-row">
-      <div class="transaction-icon">↓</div>
-      <div><b>${escapeHtml(r.profiles?.cardholder_name || "Unknown user")}</b><small>@${escapeHtml(r.profiles?.username||"?")} • ${escapeHtml(new Date(r.created_at).toLocaleString())}</small></div>
-      <div class="amount positive">${money(r.amount)}</div>
+      <div class="request-main">
+        <div class="transaction-icon">↓</div>
+        <div class="request-info"><b>${escapeHtml(r.profiles?.cardholder_name || "Unknown user")}</b><small>@${escapeHtml(r.profiles?.username||"?")} • ${escapeHtml(new Date(r.created_at).toLocaleString())}</small></div>
+        <div class="amount positive">${money(r.amount)}</div>
+      </div>
       <div class="admin-actions">
         <button class="primary" onclick="approveDeposit(${r.id})">Approve</button>
         <button class="secondary" onclick="rejectDeposit(${r.id})">Reject</button>
@@ -90,12 +93,15 @@ async function loadTransfers(){
     .order("created_at",{ascending:true});
   if(error){list.innerHTML=`<div class="empty">${escapeHtml(error.message)}</div>`;return;}
   transferCache=data||[];
+  document.getElementById("transferCount").textContent=transferCache.length?`${transferCache.length} pending`:"All caught up";
   if(!transferCache.length){list.innerHTML='<div class="empty">No pending transfer requests.</div>';return;}
   list.innerHTML=transferCache.map(r=>`
     <div class="request-row">
-      <div class="transaction-icon">↗</div>
-      <div><b>@${escapeHtml(r.sender?.username||"?")} → @${escapeHtml(r.recipient?.username||"?")}</b><small>${escapeHtml(new Date(r.created_at).toLocaleString())}</small></div>
-      <div class="amount negative">${money(r.amount)}</div>
+      <div class="request-main">
+        <div class="transaction-icon">↗</div>
+        <div class="request-info"><b>@${escapeHtml(r.sender?.username||"?")} → @${escapeHtml(r.recipient?.username||"?")}</b><small>${escapeHtml(new Date(r.created_at).toLocaleString())}</small></div>
+        <div class="amount negative">${money(r.amount)}</div>
+      </div>
       <div class="admin-actions">
         <button class="primary" onclick="approveTransfer(${r.id})">Approve</button>
         <button class="secondary" onclick="rejectTransfer(${r.id})">Reject</button>
