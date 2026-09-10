@@ -36,28 +36,44 @@ function toggleAuthMode(){
 }
 
 async function handleAuth(){
-  const email=document.getElementById("authEmail").value.trim();
+  const username=document.getElementById("authUsername").value.trim().toLowerCase();
   const password=document.getElementById("authPassword").value;
   const name=document.getElementById("authName").value.trim();
   const msg=document.getElementById("authMessage");
-  if(!email || !password || (!isLoginMode && !name)){msg.textContent="Please complete all fields.";msg.style.color="#b44747";return;}
+  if(!username || !password || (!isLoginMode && !name)){msg.textContent="Please complete all fields.";msg.style.color="#b44747";return;}
+  if(!/^[a-z0-9_]{3,20}$/.test(username)){
+    msg.textContent="Username must be 3-20 characters: letters, numbers, or underscores only.";
+    msg.style.color="#b44747";
+    return;
+  }
+
+  // Supabase Auth needs an email under the hood, so we derive one from the
+  // username instead of asking for it. Users only ever see/enter a username.
+  const email=username+"@zcredit.local";
 
   msg.textContent="Working...";
   if(isLoginMode){
     const {error}=await supabaseClient.auth.signInWithPassword({email,password});
-    if(error){msg.textContent=error.message;msg.style.color="#b44747";return;}
+    if(error){msg.textContent="Incorrect username or password.";msg.style.color="#b44747";return;}
   }else{
+    const {data:existing}=await supabaseClient.from("profiles").select("id").eq("username",username).maybeSingle();
+    if(existing){msg.textContent="That username is already taken.";msg.style.color="#b44747";return;}
+
     const {data,error}=await supabaseClient.auth.signUp({email,password});
-    if(error){msg.textContent=error.message;msg.style.color="#b44747";return;}
+    if(error){
+      msg.textContent=/registered|exists/i.test(error.message)?"That username is already taken.":error.message;
+      msg.style.color="#b44747";
+      return;
+    }
     if(data.user) {
       const {error: profileError}=await supabaseClient.from("profiles").upsert({
         id:data.user.id,
-        username: email.split("@")[0],
+        username: username,
         cardholder_name:name
       });
       if(profileError){msg.textContent=profileError.message;msg.style.color="#b44747";return;}
     }
-    msg.textContent="Account created. If email confirmation is enabled, check your email before logging in.";
+    msg.textContent="Account created. If email confirmation is enabled on your Supabase project, this will fail to confirm — see note below.";
     msg.style.color="#287548";
     return;
   }
@@ -225,6 +241,10 @@ async function updateUsername(){
     msg.style.color="#b44747";
     return;
   }
+
+  // Keep the login email (which is derived from the username) in sync,
+  // so the user can still log in with their new username afterward.
+  await supabaseClient.auth.updateUser({email:newUsername+"@zcredit.local"});
 
   state.username=newUsername;
   msg.textContent="Username updated.";
