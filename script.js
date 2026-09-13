@@ -4,7 +4,6 @@ let currentUser = null;
 const state = {
   name: "YOUR NAME",
   number: "",
-  expiry: "09/30",
   balance: 0,
   username: "",
   transactions: []
@@ -19,8 +18,16 @@ function money(n){ return "€" + Number(n).toLocaleString("en-US",{minimumFract
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
 
 function showPage(id){
+  if(id==="dashboard" && !currentUser){
+    id="auth";
+    document.getElementById("authMessage").textContent="Log in to view your dashboard.";
+    document.getElementById("authMessage").style.color="#65707c";
+  }
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.getElementById(id).classList.add("active");
+  document.querySelectorAll("nav button").forEach(b=>b.classList.remove("nav-active"));
+  const navMap={home:"navHome",request:"navRequest",dashboard:"navDashboard"};
+  if(navMap[id]) document.getElementById(navMap[id]).classList.add("nav-active");
   if(id==="dashboard") renderDashboard();
   window.scrollTo({top:0,behavior:"smooth"});
 }
@@ -50,17 +57,30 @@ async function handleAuth(){
   // Supabase Auth needs an email under the hood, so we derive one from the
   // username instead of asking for it. Users only ever see/enter a username.
   const email=username+"@zcredit.local";
+  const btn=document.getElementById("authButton");
 
   msg.textContent="Working...";
+  btn.disabled=true;
   if(isLoginMode){
     const {error}=await supabaseClient.auth.signInWithPassword({email,password});
-    if(error){msg.textContent="Incorrect username or password.";msg.style.color="#b44747";return;}
+    btn.disabled=false;
+    if(error){
+      if(/confirm/i.test(error.message)){
+        msg.textContent="This account isn't confirmed yet. Ask the site admin to disable email confirmation in Supabase, or confirm this account manually in the Supabase dashboard.";
+      }else{
+        msg.textContent="Incorrect username or password.";
+      }
+      console.error("Login error:", error.message);
+      msg.style.color="#b44747";
+      return;
+    }
   }else{
     const {data:existing}=await supabaseClient.from("profiles").select("id").eq("username",username).maybeSingle();
-    if(existing){msg.textContent="That username is already taken.";msg.style.color="#b44747";return;}
+    if(existing){btn.disabled=false;msg.textContent="That username is already taken.";msg.style.color="#b44747";return;}
 
     const {data,error}=await supabaseClient.auth.signUp({email,password});
     if(error){
+      btn.disabled=false;
       msg.textContent=/registered|exists/i.test(error.message)?"That username is already taken.":error.message;
       msg.style.color="#b44747";
       return;
@@ -71,29 +91,40 @@ async function handleAuth(){
         username: username,
         cardholder_name:name
       });
-      if(profileError){msg.textContent=profileError.message;msg.style.color="#b44747";return;}
+      if(profileError){btn.disabled=false;msg.textContent=profileError.message;msg.style.color="#b44747";return;}
     }
     msg.textContent="Account created. If email confirmation is enabled on your Supabase project, this will fail to confirm — see note below.";
     msg.style.color="#287548";
+    btn.disabled=false;
     return;
   }
   await loadUser();
   showPage("dashboard");
 }
 
+function updateAuthNav(){
+  const btn=document.getElementById("authNav");
+  if(currentUser){
+    btn.textContent="Sign Out";
+    btn.onclick=signOut;
+  }else{
+    btn.textContent="Login / Sign Up";
+    btn.onclick=()=>showPage("auth");
+  }
+}
+
 async function loadUser(){
   const {data:{user}}=await supabaseClient.auth.getUser();
   currentUser=user;
   if(!user){
-    document.getElementById("authNav").textContent="Login / Sign Up";
+    updateAuthNav();
     return;
   }
-  document.getElementById("authNav").textContent="My Account";
+  updateAuthNav();
   const {data:profile}=await supabaseClient.from("profiles").select("*").eq("id",user.id).maybeSingle();
   if(profile){
     state.name=profile.cardholder_name || "YOUR NAME";
     state.number=profile.card_number || "";
-    state.expiry=profile.expiry || "09/30";
     state.balance=Number(profile.balance || 0);
     state.username=profile.username || "";
   }
@@ -118,6 +149,7 @@ async function createCard(){
 
   const name=document.getElementById("setupName").value.trim();
   const msg=document.getElementById("cardSetupMessage");
+  const btn=document.getElementById("createCardBtn");
 
   if(!name){
     msg.textContent="Enter a cardholder name.";
@@ -125,18 +157,19 @@ async function createCard(){
     return;
   }
 
+  btn.disabled=true;
   state.name=name;
   state.number=generateCardNumber();
-  state.expiry="09/30";
 
   const {error}=await supabaseClient
     .from("profiles")
     .update({
       cardholder_name: state.name,
-      card_number: state.number,
-      expiry: state.expiry
+      card_number: state.number
     })
     .eq("id", currentUser.id);
+
+  btn.disabled=false;
 
   if(error){
     msg.textContent=error.message;
@@ -165,7 +198,6 @@ function renderDashboard(){
   document.getElementById("availableDisplay").textContent=money(state.balance);
   ["dashCardName","detailName"].forEach(id=>document.getElementById(id).textContent=name);
   ["dashCardNumber","detailNumber"].forEach(id=>document.getElementById(id).textContent=state.number||"CARD NOT CREATED");
-  ["dashExpiry","detailExpiry"].forEach(id=>document.getElementById(id).textContent=state.expiry||"--/--");
   document.getElementById("transactions").innerHTML=state.transactions.length
     ? state.transactions.slice().reverse().map(t=>`
       <div class="transaction">
@@ -180,10 +212,13 @@ async function submitRequest(){
   if(!currentUser){showPage("auth");return;}
   const amount=Number(document.getElementById("requestAmount").value);
   const msg=document.getElementById("requestMessage");
+  const btn=document.getElementById("requestSubmitBtn");
   if(!amount || amount<=0){msg.textContent="Enter a valid amount.";msg.style.color="#b44747";return;}
+  btn.disabled=true;
   const {error}=await supabaseClient.from("deposit_requests").insert({
     user_id:currentUser.id, amount, status:"pending"
   });
+  btn.disabled=false;
   if(error){msg.textContent=error.message;msg.style.color="#b44747";return;}
   msg.textContent=`Request for ${money(amount)} recorded. Give ${money(amount)} in fictional Money Life cash to Zaual IRL.`;
   msg.style.color="#287548";
@@ -195,16 +230,19 @@ async function sendMoney(){
   const recipient=document.getElementById("recipient").value.trim().replace(/^@/,"");
   const amount=Number(document.getElementById("transferAmount").value);
   const msg=document.getElementById("transferMessage");
+  const btn=document.getElementById("transferSubmitBtn");
   if(!recipient || !amount || amount<=0){msg.textContent="Enter a username and a valid amount.";msg.style.color="#b44747";return;}
   if(amount>state.balance){msg.textContent="Insufficient ZCredit balance.";msg.style.color="#b44747";return;}
 
+  btn.disabled=true;
   const {data:target,error:targetError}=await supabaseClient.from("profiles").select("id,username").eq("username",recipient).maybeSingle();
-  if(targetError || !target){msg.textContent="User not found.";msg.style.color="#b44747";return;}
-  if(target.id===currentUser.id){msg.textContent="You cannot transfer money to yourself.";msg.style.color="#b44747";return;}
+  if(targetError || !target){btn.disabled=false;msg.textContent="User not found.";msg.style.color="#b44747";return;}
+  if(target.id===currentUser.id){btn.disabled=false;msg.textContent="You cannot transfer money to yourself.";msg.style.color="#b44747";return;}
 
   const {error}=await supabaseClient.from("transfer_requests").insert({
     sender_id:currentUser.id, recipient_id:target.id, amount, status:"pending"
   });
+  btn.disabled=false;
   if(error){msg.textContent=error.message;msg.style.color="#b44747";return;}
 
   msg.textContent=`Transfer request for ${money(amount)} to @${recipient} submitted for Zaual verification.`;
@@ -216,6 +254,7 @@ async function sendMoney(){
 async function updateUsername(){
   if(!currentUser){showPage("auth");return;}
   const msg=document.getElementById("usernameMessage");
+  const btn=document.getElementById("usernameSaveBtn");
   const newUsername=document.getElementById("usernameInput").value.trim().toLowerCase();
 
   if(!newUsername){msg.textContent="Enter a username.";msg.style.color="#b44747";return;}
@@ -231,7 +270,9 @@ async function updateUsername(){
   }
 
   msg.textContent="Saving...";
+  btn.disabled=true;
   const {error}=await supabaseClient.from("profiles").update({username:newUsername}).eq("id",currentUser.id);
+  btn.disabled=false;
   if(error){
     if(error.code==="23505" || /duplicate/i.test(error.message)){
       msg.textContent="That username is already taken.";
@@ -256,6 +297,7 @@ async function signOut(){
   currentUser=null;
   state.name="YOUR NAME";state.number="";state.balance=0;state.transactions=[];
   updateHero();
+  updateAuthNav();
   showPage("home");
 }
 

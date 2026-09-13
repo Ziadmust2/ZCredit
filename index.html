@@ -14,9 +14,9 @@
       <small>by Money Life</small>
     </a>
     <nav>
-      <button onclick="showPage('home')">Home</button>
-      <button onclick="showPage('request')">Request Money</button>
-      <button onclick="showPage('dashboard')">My Account / Dashboard</button>
+      <button id="navHome" class="nav-active" onclick="showPage('home')">Home</button>
+      <button id="navRequest" onclick="showPage('request')">Request Money</button>
+      <button id="navDashboard" onclick="showPage('dashboard')">My Account</button>
       <button id="authNav" onclick="showPage('auth')">Login / Sign Up</button>
     </nav>
   </header>
@@ -47,7 +47,6 @@
             <div class="card-number" id="heroCardNumber">5428 9012 3476 1208</div>
             <div class="card-bottom">
               <div><small>CARDHOLDER</small><strong id="heroCardName">YOUR NAME</strong></div>
-              <div><small>VALID THRU</small><strong>09/30</strong></div>
               <div class="contactless">)))</div>
             </div>
           </div>
@@ -76,7 +75,7 @@
           <h2>Request a balance</h2>
           <label for="requestAmount">Amount in fictional Euros</label>
           <div class="money-input"><span>€</span><input id="requestAmount" type="number" min="1" placeholder="0.00"></div>
-          <button class="primary full" onclick="submitRequest()">Submit Request</button>
+          <button class="primary full" id="requestSubmitBtn" onclick="submitRequest()">Submit Request</button>
           <p class="form-note">This is a fictional Money Life system. No real payment is processed by this website.</p>
           <div id="requestMessage" class="message"></div>
         </div>
@@ -133,7 +132,7 @@
         <p class="form-note">Enter your cardholder name. The card number is generated automatically.</p>
         <label>Cardholder name</label>
         <input id="setupName" type="text" placeholder="Your name">
-        <button class="primary" onclick="createCard()">Create ZCredit Card</button>
+        <button class="primary" id="createCardBtn" onclick="createCard()">Create ZCredit Card</button>
         <div id="cardSetupMessage" class="message"></div>
       </div>
 
@@ -156,12 +155,11 @@
           <div class="credit-card small-card">
             <div class="card-top"><span class="mini-brand">ZCredit</span><span class="chip"></span></div>
             <div class="card-number" id="dashCardNumber">5428 9012 3476 1208</div>
-            <div class="card-bottom"><div><small>CARDHOLDER</small><strong id="dashCardName">YOUR NAME</strong></div><div><small>VALID THRU</small><strong id="dashExpiry">09/30</strong></div></div>
+            <div class="card-bottom"><div><small>CARDHOLDER</small><strong id="dashCardName">YOUR NAME</strong></div></div>
           </div>
           <div class="card-details">
             <div><span>Cardholder</span><b id="detailName">YOUR NAME</b></div>
             <div><span>Card number</span><b id="detailNumber">5428 9012 3476 1208</b></div>
-            <div><span>Expiration</span><b id="detailExpiry">09/30</b></div>
           </div>
         </div>
 
@@ -171,7 +169,7 @@
           <input id="recipient" type="text" placeholder="@username">
           <label>Amount</label>
           <div class="money-input"><span>€</span><input id="transferAmount" type="number" min="0.01" step="0.01" placeholder="0.00"></div>
-          <button class="primary full" onclick="sendMoney()">Transfer Money</button>
+          <button class="primary full" id="transferSubmitBtn" onclick="sendMoney()">Transfer Money</button>
           <div id="transferMessage" class="message"></div>
         </div>
       </div>
@@ -181,7 +179,7 @@
         <p class="form-note">Other Money Life users need this to send you money. Change it any time — no need to ask an admin.</p>
         <label for="usernameInput">Username</label>
         <input id="usernameInput" type="text" placeholder="username">
-        <button class="primary" onclick="updateUsername()">Save Username</button>
+        <button class="primary" id="usernameSaveBtn" onclick="updateUsername()">Save Username</button>
         <div id="usernameMessage" class="message"></div>
       </div>
 
