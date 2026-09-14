@@ -113,27 +113,54 @@ function updateAuthNav(){
   }
 }
 
+let realtimeChannel=null;
+
 async function loadUser(){
   const {data:{user}}=await supabaseClient.auth.getUser();
   currentUser=user;
   if(!user){
     updateAuthNav();
+    unsubscribeRealtime();
     return;
   }
   updateAuthNav();
-  const {data:profile}=await supabaseClient.from("profiles").select("*").eq("id",user.id).maybeSingle();
+  await refreshAccountData(user.id);
+  subscribeRealtime(user.id);
+}
+
+async function refreshAccountData(userId){
+  const {data:profile}=await supabaseClient.from("profiles").select("*").eq("id",userId).maybeSingle();
   if(profile){
     state.name=profile.cardholder_name || "YOUR NAME";
     state.number=profile.card_number || "";
     state.balance=Number(profile.balance || 0);
     state.username=profile.username || "";
   }
-  const {data:tx}=await supabaseClient.from("transactions").select("*").eq("user_id",user.id).order("created_at",{ascending:true});
+  const {data:tx}=await supabaseClient.from("transactions").select("*").eq("user_id",userId).order("created_at",{ascending:true});
   state.transactions=(tx||[]).map(t=>({
     type:t.type, title:t.title, amount:Number(t.amount),
     date:new Date(t.created_at).toLocaleString()
   }));
   updateHero();
+  if(document.getElementById("dashboard").classList.contains("active")) renderDashboard();
+}
+
+// Subscribes to live changes on this user's profile (balance) and
+// transactions, so the dashboard updates itself without a manual refresh —
+// e.g. the moment an admin approves a deposit or transfer.
+function subscribeRealtime(userId){
+  if(realtimeChannel) return;
+  realtimeChannel=supabaseClient.channel("zcredit-account-"+userId)
+    .on("postgres_changes",{event:"*",schema:"public",table:"profiles",filter:`id=eq.${userId}`},()=>refreshAccountData(userId))
+    .on("postgres_changes",{event:"*",schema:"public",table:"transactions",filter:`user_id=eq.${userId}`},()=>refreshAccountData(userId))
+    .subscribe();
+}
+
+function unsubscribeRealtime(){
+  if(realtimeChannel){
+    supabaseClient.removeChannel(realtimeChannel);
+    realtimeChannel=null;
+  }
 }
 
 function updateHero(){
@@ -294,6 +321,7 @@ async function updateUsername(){
 
 async function signOut(){
   await supabaseClient.auth.signOut();
+  unsubscribeRealtime();
   currentUser=null;
   state.name="YOUR NAME";state.number="";state.balance=0;state.transactions=[];
   updateHero();
