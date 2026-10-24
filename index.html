@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ZCredit — Money Life</title>
   <link rel="stylesheet" href="styles.css">
-  <link rel="shortcut icon" type="image/png" href="zcredit-icon.png"
 </head>
 <body>
   <header class="topbar">
@@ -187,6 +186,22 @@
       <div class="panel history-panel">
         <div class="panel-header"><h2>Transaction History</h2><span class="tiny">Recent activity</span></div>
         <div id="transactions"></div>
+      </div>
+    </section>
+
+    <section id="giveaway" class="page">
+      <div class="page-heading">
+        <span class="eyebrow">GIVEAWAY</span>
+        <h1 id="gwTitle">Giveaway</h1>
+        <p id="gwSub">Claim your free ZCredit before the timer runs out.</p>
+      </div>
+      <div class="panel form-panel" style="max-width:520px">
+        <div class="panel-header"><h2>Prize</h2><span class="badge" id="gwBadge"></span></div>
+        <div class="gw-prize" id="gwPrize">&euro;0.00</div>
+        <p class="form-note" id="gwDetail"></p>
+        <div class="gw-count" id="gwCount"></div>
+        <button class="primary full" id="gwClaimBtn" onclick="claimGiveaway()" style="margin-top:18px">Claim</button>
+        <div id="gwMessage" class="message"></div>
       </div>
     </section>
   </main>

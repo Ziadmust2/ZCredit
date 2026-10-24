@@ -18,6 +18,7 @@ function money(n){ return "€" + Number(n).toLocaleString("en-US",{minimumFract
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));}
 
 function showPage(id){
+  if(id!=="giveaway") stopGiveawayTimer();
   if(id==="dashboard" && !currentUser){
     id="auth";
     document.getElementById("authMessage").textContent="Log in to view your dashboard.";
@@ -99,7 +100,8 @@ async function handleAuth(){
     return;
   }
   await loadUser();
-  showPage("dashboard");
+  if(pendingGiveawayCode) await openGiveaway(pendingGiveawayCode);
+  else showPage("dashboard");
 }
 
 function updateAuthNav(){
@@ -333,4 +335,126 @@ document.addEventListener("DOMContentLoaded", async ()=>{
   const {data:{session}}=await supabaseClient.auth.getSession();
   if(session) await loadUser();
   else updateHero();
+  const gwCode=new URLSearchParams(location.search).get("giveaway");
+  if(gwCode) await openGiveaway(gwCode);
 });
+
+// ───────────── Giveaways ─────────────
+// Opened from a link like  index.html?giveaway=<code>. All checks and the actual crediting
+// happen in the database (get_giveaway / claim_giveaway), never in the browser.
+let pendingGiveawayCode=null;
+let gwInfo=null;
+let gwClockOffset=0;   // server time minus browser time, so the countdown can't be fooled by a wrong clock
+let gwTimer=null;
+
+function stopGiveawayTimer(){ if(gwTimer){clearInterval(gwTimer);gwTimer=null;} }
+
+function fmtCountdown(ms){
+  if(ms<0) ms=0;
+  const t=Math.floor(ms/1000), d=Math.floor(t/86400), h=Math.floor(t%86400/3600), m=Math.floor(t%3600/60), sec=t%60;
+  const p=n=>String(n).padStart(2,"0");
+  return (d>0?d+"d ":"")+p(h)+":"+p(m)+":"+p(sec);
+}
+
+async function openGiveaway(code){
+  pendingGiveawayCode=code;
+  showPage("giveaway");
+  await refreshGiveaway();
+}
+
+async function refreshGiveaway(){
+  if(!pendingGiveawayCode) return;
+  const {data,error}=await supabaseClient.rpc("get_giveaway",{p_code:pendingGiveawayCode});
+  if(error || !data || !data.found){
+    stopGiveawayTimer();
+    gwInfo=null;
+    document.getElementById("gwTitle").textContent="Giveaway not found";
+    document.getElementById("gwSub").textContent="This link isn't valid. Double-check that you copied the whole link.";
+    document.getElementById("gwPrize").textContent="";
+    document.getElementById("gwBadge").textContent="";
+    document.getElementById("gwBadge").className="badge";
+    document.getElementById("gwDetail").textContent="";
+    document.getElementById("gwCount").textContent="";
+    const b=document.getElementById("gwClaimBtn");
+    b.textContent="Back to home"; b.disabled=false; b.onclick=()=>showPage("home");
+    return;
+  }
+  gwInfo=data;
+  gwClockOffset=new Date(data.server_now).getTime()-Date.now();
+  renderGiveaway();
+  stopGiveawayTimer();
+  if(data.status==="active" || data.status==="scheduled") gwTimer=setInterval(tickGiveaway,1000);
+}
+
+function renderGiveaway(){
+  const g=gwInfo; if(!g) return;
+  const badge=document.getElementById("gwBadge"), btn=document.getElementById("gwClaimBtn");
+  const label={active:"Live",scheduled:"Scheduled",expired:"Expired",cancelled:"Cancelled",full:"Fully claimed"};
+  const claimed=g.already_claimed;
+  document.getElementById("gwTitle").textContent=claimed?"You've claimed this one":"Free ZCredit giveaway";
+  document.getElementById("gwSub").textContent=claimed?"The money is already in your balance.":"Claim your free ZCredit before the timer runs out.";
+  document.getElementById("gwPrize").textContent=money(g.amount);
+  badge.textContent=claimed?"Claimed":label[g.status];
+  badge.className="badge badge-"+(claimed?"active":g.status);
+
+  const spots=g.spots_left===null?"":` ${g.spots_left} spot${g.spots_left===1?"":"s"} left.`;
+  document.getElementById("gwDetail").textContent=
+    g.status==="scheduled" ? "Starts "+new Date(g.starts_at).toLocaleString()+"."
+    : g.status==="active" ? "One claim per person. Ends "+new Date(g.expires_at).toLocaleString()+"."+spots
+    : "";
+
+  btn.onclick=claimGiveaway;
+  if(claimed){ btn.textContent="Go to my account"; btn.disabled=false; btn.onclick=()=>showPage("dashboard"); }
+  else if(g.status==="active"){ btn.disabled=false; btn.textContent=currentUser?"Claim "+money(g.amount):"Log in to claim"; }
+  else if(g.status==="scheduled"){ btn.textContent="Not started yet"; btn.disabled=true; }
+  else{
+    const why={expired:"This giveaway has ended.",cancelled:"This giveaway was cancelled.",full:"All spots have been claimed."};
+    document.getElementById("gwDetail").textContent=why[g.status];
+    btn.textContent="Go to my account"; btn.disabled=false; btn.onclick=()=>showPage(currentUser?"dashboard":"home");
+  }
+  tickGiveaway();
+}
+
+function tickGiveaway(){
+  const g=gwInfo, el=document.getElementById("gwCount"); if(!g||!el) return;
+  const now=Date.now()+gwClockOffset;
+  if(g.status==="scheduled"){
+    const left=new Date(g.starts_at).getTime()-now;
+    el.textContent="Starts in "+fmtCountdown(left);
+    if(left<=0) refreshGiveaway();
+  }else if(g.status==="active" && !g.already_claimed){
+    const left=new Date(g.expires_at).getTime()-now;
+    el.textContent="Ends in "+fmtCountdown(left);
+    if(left<=0) refreshGiveaway();
+  }else{
+    el.textContent="";
+  }
+}
+
+async function claimGiveaway(){
+  const msg=document.getElementById("gwMessage"), btn=document.getElementById("gwClaimBtn");
+  if(!currentUser){
+    showPage("auth");
+    const am=document.getElementById("authMessage");
+    am.textContent="Log in or create an account to claim your giveaway.";
+    am.style.color="#65707c";
+    return;
+  }
+  msg.textContent="Claiming..."; msg.style.color="#65707c";
+  btn.disabled=true;
+  const {data,error}=await supabaseClient.rpc("claim_giveaway",{p_code:pendingGiveawayCode});
+  if(error || !data){
+    msg.textContent=error?error.message:"Something went wrong. Try again.";
+    msg.style.color="#b44747";
+    btn.disabled=false;
+    return;
+  }
+  if(!data.ok){
+    msg.textContent=data.error; msg.style.color="#b44747";
+    await refreshGiveaway();
+    return;
+  }
+  msg.textContent="You received "+money(data.amount)+"!"; msg.style.color="#287548";
+  await refreshAccountData(currentUser.id);
+  await refreshGiveaway();
+}
