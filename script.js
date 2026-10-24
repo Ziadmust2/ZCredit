@@ -19,17 +19,19 @@ function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":
 
 function showPage(id){
   if(id!=="giveaway") stopGiveawayTimer();
-  if(id==="dashboard" && !currentUser){
-    id="auth";
-    document.getElementById("authMessage").textContent="Log in to view your dashboard.";
+  if(id!=="leaderboard") stopLeaderboardTimer();
+  if((id==="dashboard" || id==="leaderboard") && !currentUser){
+    document.getElementById("authMessage").textContent=id==="leaderboard"?"Log in to see the leaderboard.":"Log in to view your dashboard.";
     document.getElementById("authMessage").style.color="#65707c";
+    id="auth";
   }
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.getElementById(id).classList.add("active");
   document.querySelectorAll("nav button").forEach(b=>b.classList.remove("nav-active"));
-  const navMap={home:"navHome",request:"navRequest",dashboard:"navDashboard"};
+  const navMap={home:"navHome",request:"navRequest",leaderboard:"navLeaderboard",dashboard:"navDashboard"};
   if(navMap[id]) document.getElementById(navMap[id]).classList.add("nav-active");
   if(id==="dashboard") renderDashboard();
+  if(id==="leaderboard") startLeaderboard();
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
@@ -457,4 +459,50 @@ async function claimGiveaway(){
   msg.textContent="You received "+money(data.amount)+"!"; msg.style.color="#287548";
   await refreshAccountData(currentUser.id);
   await refreshGiveaway();
+}
+
+// ───────────── Leaderboard ─────────────
+// Ranks come from the get_leaderboard() database function (username + balance only).
+let lbTimer=null;
+
+function stopLeaderboardTimer(){ if(lbTimer){clearInterval(lbTimer);lbTimer=null;} }
+
+function startLeaderboard(){
+  stopLeaderboardTimer();
+  loadLeaderboard();
+  lbTimer=setInterval(loadLeaderboard,15000);   // keeps balances fresh while the page is open
+}
+
+async function loadLeaderboard(){
+  const list=document.getElementById("lbList"), meta=document.getElementById("lbMeta");
+  const {data,error}=await supabaseClient.rpc("get_leaderboard");
+  if(error){
+    if(!list.querySelector(".lb-row")) list.innerHTML='<div class="empty">Could not load the leaderboard. Try again in a moment.</div>';
+    return;
+  }
+  const rows=data||[];
+  meta.textContent=rows.length+" account"+(rows.length===1?"":"s");
+  if(!rows.length){list.innerHTML='<div class="empty">No accounts yet.</div>';return;}
+  list.textContent="";
+  rows.forEach(r=>{
+    const row=document.createElement("div");
+    row.className="lb-row"+(r.rank<=3?" top"+r.rank:"")+(r.is_me?" me":"");
+
+    const rank=document.createElement("div");
+    rank.className="lb-rank"; rank.textContent=r.rank;
+
+    const name=document.createElement("div");
+    name.className="lb-name"; name.textContent="@"+r.username;   // textContent: usernames are never parsed as HTML
+    if(r.is_me){
+      const you=document.createElement("span");
+      you.className="lb-you"; you.textContent="You";
+      name.appendChild(you);
+    }
+
+    const amt=document.createElement("div");
+    amt.className="amount"; amt.textContent=money(r.balance);
+
+    row.append(rank,name,amt);
+    list.appendChild(row);
+  });
 }

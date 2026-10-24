@@ -16,6 +16,7 @@
     <nav>
       <button id="navHome" class="nav-active" onclick="showPage('home')">Home</button>
       <button id="navRequest" onclick="showPage('request')">Request Money</button>
+      <button id="navLeaderboard" onclick="showPage('leaderboard')">Leaderboard</button>
       <button id="navDashboard" onclick="showPage('dashboard')">My Account</button>
       <button id="authNav" onclick="showPage('auth')">Login / Sign Up</button>
     </nav>
@@ -202,6 +203,18 @@
         <div class="gw-count" id="gwCount"></div>
         <button class="primary full" id="gwClaimBtn" onclick="claimGiveaway()" style="margin-top:18px">Claim</button>
         <div id="gwMessage" class="message"></div>
+      </div>
+    </section>
+
+    <section id="leaderboard" class="page">
+      <div class="page-heading">
+        <span class="eyebrow">LEADERBOARD</span>
+        <h1>Who has the most ZCredit?</h1>
+        <p>Every ZCredit account, ranked by balance. It updates on its own.</p>
+      </div>
+      <div class="panel history-panel" style="max-width:720px">
+        <div class="panel-header"><h2>Rankings</h2><span class="tiny" id="lbMeta"></span></div>
+        <div id="lbList"><div class="empty">Loading…</div></div>
       </div>
     </section>
   </main>
