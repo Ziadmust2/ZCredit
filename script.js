@@ -22,7 +22,7 @@ function showPage(id){
   if(id!=="leaderboard") stopLeaderboardTimer();
   if((id==="dashboard" || id==="leaderboard") && !currentUser){
     document.getElementById("authMessage").textContent=id==="leaderboard"?"Log in to see the leaderboard.":"Log in to view your dashboard.";
-    document.getElementById("authMessage").style.color="#65707c";
+    document.getElementById("authMessage").style.color="var(--muted)";
     id="auth";
   }
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
@@ -30,9 +30,17 @@ function showPage(id){
   document.querySelectorAll("nav button").forEach(b=>b.classList.remove("nav-active"));
   const navMap={home:"navHome",request:"navRequest",leaderboard:"navLeaderboard",dashboard:"navDashboard"};
   if(navMap[id]) document.getElementById(navMap[id]).classList.add("nav-active");
+  // Bottom tab bar (phones). The login screen counts as the Account tab.
+  const tabMap={home:"tabHome",request:"tabRequest",leaderboard:"tabLeaderboard",dashboard:"tabDashboard",auth:"tabDashboard"};
+  if(tabMap[id]) document.getElementById(tabMap[id]).classList.add("nav-active");
   if(id==="dashboard") renderDashboard();
   if(id==="leaderboard") startLeaderboard();
   window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function scrollToEl(id){
+  const el=document.getElementById(id);
+  if(el) el.scrollIntoView({behavior:"smooth",block:"start"});
 }
 
 function toggleAuthMode(){
@@ -50,10 +58,10 @@ async function handleAuth(){
   const password=document.getElementById("authPassword").value;
   const name=document.getElementById("authName").value.trim();
   const msg=document.getElementById("authMessage");
-  if(!username || !password || (!isLoginMode && !name)){msg.textContent="Please complete all fields.";msg.style.color="#b44747";return;}
+  if(!username || !password || (!isLoginMode && !name)){msg.textContent="Please complete all fields.";msg.style.color="var(--neg)";return;}
   if(!/^[a-z0-9_]{3,20}$/.test(username)){
     msg.textContent="Username must be 3-20 characters: letters, numbers, or underscores only.";
-    msg.style.color="#b44747";
+    msg.style.color="var(--neg)";
     return;
   }
 
@@ -74,18 +82,18 @@ async function handleAuth(){
         msg.textContent="Incorrect username or password.";
       }
       console.error("Login error:", error.message);
-      msg.style.color="#b44747";
+      msg.style.color="var(--neg)";
       return;
     }
   }else{
     const {data:existing}=await supabaseClient.from("profiles").select("id").eq("username",username).maybeSingle();
-    if(existing){btn.disabled=false;msg.textContent="That username is already taken.";msg.style.color="#b44747";return;}
+    if(existing){btn.disabled=false;msg.textContent="That username is already taken.";msg.style.color="var(--neg)";return;}
 
     const {data,error}=await supabaseClient.auth.signUp({email,password});
     if(error){
       btn.disabled=false;
       msg.textContent=/registered|exists/i.test(error.message)?"That username is already taken.":error.message;
-      msg.style.color="#b44747";
+      msg.style.color="var(--neg)";
       return;
     }
     if(data.user) {
@@ -94,10 +102,10 @@ async function handleAuth(){
         username: username,
         cardholder_name:name
       });
-      if(profileError){btn.disabled=false;msg.textContent=profileError.message;msg.style.color="#b44747";return;}
+      if(profileError){btn.disabled=false;msg.textContent=profileError.message;msg.style.color="var(--neg)";return;}
     }
     msg.textContent="Account created. If email confirmation is enabled on your Supabase project, this will fail to confirm — see note below.";
-    msg.style.color="#287548";
+    msg.style.color="var(--pos)";
     btn.disabled=false;
     return;
   }
@@ -184,7 +192,7 @@ async function createCard(){
 
   if(!name){
     msg.textContent="Enter a cardholder name.";
-    msg.style.color="#b44747";
+    msg.style.color="var(--neg)";
     return;
   }
 
@@ -204,12 +212,12 @@ async function createCard(){
 
   if(error){
     msg.textContent=error.message;
-    msg.style.color="#b44747";
+    msg.style.color="var(--neg)";
     return;
   }
 
   msg.textContent="Your ZCredit card has been created.";
-  msg.style.color="#287548";
+  msg.style.color="var(--pos)";
 
   updateHero();
   renderDashboard();
@@ -232,7 +240,7 @@ function renderDashboard(){
   document.getElementById("transactions").innerHTML=state.transactions.length
     ? state.transactions.slice().reverse().map(t=>`
       <div class="transaction">
-        <div class="transaction-icon">${t.type==="deposit"?"↓":"↑"}</div>
+        <div class="transaction-icon ${t.type==="deposit"?"in":"out"}">${t.type==="deposit"?"↓":"↑"}</div>
         <div><b>${escapeHtml(t.title)}</b><small>${escapeHtml(t.date)}</small></div>
         <div class="amount ${t.type==="deposit"?"positive":"negative"}">${t.type==="deposit"?"+":"−"}${money(t.amount)}</div>
       </div>`).join("")
@@ -244,15 +252,15 @@ async function submitRequest(){
   const amount=Number(document.getElementById("requestAmount").value);
   const msg=document.getElementById("requestMessage");
   const btn=document.getElementById("requestSubmitBtn");
-  if(!amount || amount<=0){msg.textContent="Enter a valid amount.";msg.style.color="#b44747";return;}
+  if(!amount || amount<=0){msg.textContent="Enter a valid amount.";msg.style.color="var(--neg)";return;}
   btn.disabled=true;
   const {error}=await supabaseClient.from("deposit_requests").insert({
     user_id:currentUser.id, amount, status:"pending"
   });
   btn.disabled=false;
-  if(error){msg.textContent=error.message;msg.style.color="#b44747";return;}
+  if(error){msg.textContent=error.message;msg.style.color="var(--neg)";return;}
   msg.textContent=`Request for ${money(amount)} recorded. Give ${money(amount)} in fictional Money Life cash to Zaual IRL.`;
-  msg.style.color="#287548";
+  msg.style.color="var(--pos)";
   document.getElementById("requestAmount").value="";
 }
 
@@ -262,22 +270,22 @@ async function sendMoney(){
   const amount=Number(document.getElementById("transferAmount").value);
   const msg=document.getElementById("transferMessage");
   const btn=document.getElementById("transferSubmitBtn");
-  if(!recipient || !amount || amount<=0){msg.textContent="Enter a username and a valid amount.";msg.style.color="#b44747";return;}
-  if(amount>state.balance){msg.textContent="Insufficient ZCredit balance.";msg.style.color="#b44747";return;}
+  if(!recipient || !amount || amount<=0){msg.textContent="Enter a username and a valid amount.";msg.style.color="var(--neg)";return;}
+  if(amount>state.balance){msg.textContent="Insufficient ZCredit balance.";msg.style.color="var(--neg)";return;}
 
   btn.disabled=true;
   const {data:target,error:targetError}=await supabaseClient.from("profiles").select("id,username").eq("username",recipient).maybeSingle();
-  if(targetError || !target){btn.disabled=false;msg.textContent="User not found.";msg.style.color="#b44747";return;}
-  if(target.id===currentUser.id){btn.disabled=false;msg.textContent="You cannot transfer money to yourself.";msg.style.color="#b44747";return;}
+  if(targetError || !target){btn.disabled=false;msg.textContent="User not found.";msg.style.color="var(--neg)";return;}
+  if(target.id===currentUser.id){btn.disabled=false;msg.textContent="You cannot transfer money to yourself.";msg.style.color="var(--neg)";return;}
 
   const {error}=await supabaseClient.from("transfer_requests").insert({
     sender_id:currentUser.id, recipient_id:target.id, amount, status:"pending"
   });
   btn.disabled=false;
-  if(error){msg.textContent=error.message;msg.style.color="#b44747";return;}
+  if(error){msg.textContent=error.message;msg.style.color="var(--neg)";return;}
 
   msg.textContent=`Transfer request for ${money(amount)} to @${recipient} submitted for Zaual verification.`;
-  msg.style.color="#287548";
+  msg.style.color="var(--pos)";
   document.getElementById("recipient").value="";
   document.getElementById("transferAmount").value="";
 }
@@ -288,15 +296,15 @@ async function updateUsername(){
   const btn=document.getElementById("usernameSaveBtn");
   const newUsername=document.getElementById("usernameInput").value.trim().toLowerCase();
 
-  if(!newUsername){msg.textContent="Enter a username.";msg.style.color="#b44747";return;}
+  if(!newUsername){msg.textContent="Enter a username.";msg.style.color="var(--neg)";return;}
   if(!/^[a-z0-9_]{3,20}$/.test(newUsername)){
     msg.textContent="Use 3-20 characters: letters, numbers, or underscores only.";
-    msg.style.color="#b44747";
+    msg.style.color="var(--neg)";
     return;
   }
   if(newUsername===state.username){
     msg.textContent="That's already your username.";
-    msg.style.color="#65707c";
+    msg.style.color="var(--muted)";
     return;
   }
 
@@ -310,7 +318,7 @@ async function updateUsername(){
     }else{
       msg.textContent=error.message;
     }
-    msg.style.color="#b44747";
+    msg.style.color="var(--neg)";
     return;
   }
 
@@ -320,7 +328,7 @@ async function updateUsername(){
 
   state.username=newUsername;
   msg.textContent="Username updated.";
-  msg.style.color="#287548";
+  msg.style.color="var(--pos)";
 }
 
 async function signOut(){
@@ -439,24 +447,24 @@ async function claimGiveaway(){
     showPage("auth");
     const am=document.getElementById("authMessage");
     am.textContent="Log in or create an account to claim your giveaway.";
-    am.style.color="#65707c";
+    am.style.color="var(--muted)";
     return;
   }
-  msg.textContent="Claiming..."; msg.style.color="#65707c";
+  msg.textContent="Claiming..."; msg.style.color="var(--muted)";
   btn.disabled=true;
   const {data,error}=await supabaseClient.rpc("claim_giveaway",{p_code:pendingGiveawayCode});
   if(error || !data){
     msg.textContent=error?error.message:"Something went wrong. Try again.";
-    msg.style.color="#b44747";
+    msg.style.color="var(--neg)";
     btn.disabled=false;
     return;
   }
   if(!data.ok){
-    msg.textContent=data.error; msg.style.color="#b44747";
+    msg.textContent=data.error; msg.style.color="var(--neg)";
     await refreshGiveaway();
     return;
   }
-  msg.textContent="You received "+money(data.amount)+"!"; msg.style.color="#287548";
+  msg.textContent="You received "+money(data.amount)+"!"; msg.style.color="var(--pos)";
   await refreshAccountData(currentUser.id);
   await refreshGiveaway();
 }

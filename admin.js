@@ -17,10 +17,10 @@ async function adminLogin(){
   const email=document.getElementById("adminEmail").value.trim();
   const password=document.getElementById("adminPassword").value;
   const msg=document.getElementById("loginMessage");
-  if(!email || !password){msg.textContent="Enter email and password.";msg.style.color="#b44747";return;}
+  if(!email || !password){msg.textContent="Enter email and password.";msg.style.color="var(--neg)";return;}
   msg.textContent="Working...";
   const {error}=await supabaseClient.auth.signInWithPassword({email,password});
-  if(error){msg.textContent=error.message;msg.style.color="#b44747";return;}
+  if(error){msg.textContent=error.message;msg.style.color="var(--neg)";return;}
   msg.textContent="";
   await checkAdmin();
 }
@@ -277,7 +277,7 @@ async function createGiveaway(){
   const startRaw=document.getElementById("gwStartInput").value;
   const dur=Number(document.getElementById("gwDurInput").value);
   const unit=Number(document.getElementById("gwUnitInput").value);
-  const fail=t=>{msg.textContent=t;msg.style.color="#b44747";};
+  const fail=t=>{msg.textContent=t;msg.style.color="var(--neg)";};
 
   if(!(amount>0)) return fail("Enter an amount greater than 0.");
   if(Math.abs(Math.round(amount*100)-amount*100)>1e-6) return fail("Use at most 2 decimal places.");
@@ -289,7 +289,7 @@ async function createGiveaway(){
   const expires=new Date(start.getTime()+dur*unit);
   if(expires<=new Date()) return fail("That giveaway would already be over — pick a later start or longer duration.");
 
-  btn.disabled=true; msg.textContent="Creating..."; msg.style.color="#65707c";
+  btn.disabled=true; msg.textContent="Creating..."; msg.style.color="var(--muted)";
   const {data,error}=await supabaseClient.from("giveaways").insert({
     amount: Math.round(amount*100)/100,
     max_claims: maxRaw?Number(maxRaw):null,
@@ -302,7 +302,7 @@ async function createGiveaway(){
   const link=giveawayLink(data.code);
   let copied=false;
   try{await navigator.clipboard.writeText(link);copied=true;}catch{}
-  msg.style.color="#287548";
+  msg.style.color="var(--pos)";
   msg.textContent=copied?"Giveaway created — link copied to your clipboard.":"Giveaway created. Link: "+link;
   document.getElementById("gwAmountInput").value="";
   document.getElementById("gwMaxInput").value="";
