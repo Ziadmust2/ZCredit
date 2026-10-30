@@ -4,7 +4,7 @@
 // Anyone could view this page's source; they still can't approve requests
 // unless the database itself recognizes their auth.uid() as the admin.
 
-const ADMIN_ID = "5f65415b-a349-4f73-8bcd-8f0f82aeebd9";
+const ADMIN_ID = "47b47d7b-32dd-4ad6-975b-3dfbb0697c84";
 
 let adminUser = null;
 let depositCache = [];

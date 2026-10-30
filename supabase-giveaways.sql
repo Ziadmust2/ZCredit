@@ -13,7 +13,7 @@
 -- Single place that defines who the admin is (same account as the other admin policies).
 create or replace function public.is_zcredit_admin()
 returns boolean language sql stable as $$
-  select auth.uid() = '5f65415b-a349-4f73-8bcd-8f0f82aeebd9'::uuid
+  select auth.uid() = '47b47d7b-32dd-4ad6-975b-3dfbb0697c84'::uuid
 $$;
 
 -- ───────────── Tables ─────────────
