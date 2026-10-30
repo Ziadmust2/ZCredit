@@ -4,7 +4,11 @@
 // Anyone could view this page's source; they still can't approve requests
 // unless the database itself recognizes their auth.uid() as the admin.
 
-const ADMIN_ID = "47b47d7b-32dd-4ad6-975b-3dfbb0697c84";
+// Admins: yousef67 and ziadmust2. Keep in sync with is_zcredit_admin() in the SQL.
+const ADMIN_IDS = [
+  "47b47d7b-32dd-4ad6-975b-3dfbb0697c84", // yousef67
+  "5f65415b-a349-4f73-8bcd-8f0f82aeebd9"  // ziadmust2
+];
 
 let adminUser = null;
 let depositCache = [];
@@ -57,7 +61,7 @@ async function checkAdmin(){
   const {data:{user}}=await supabaseClient.auth.getUser();
   adminUser=user;
   render();
-  if(user && user.id===ADMIN_ID){
+  if(user && ADMIN_IDS.includes(user.id)){
     await loadRequests();
     subscribeAdminRealtime();
   }
@@ -69,7 +73,7 @@ function render(){
   document.getElementById("adminApp").style.display="none";
   if(!adminUser){
     document.getElementById("loginPanel").style.display="block";
-  }else if(adminUser.id!==ADMIN_ID){
+  }else if(!ADMIN_IDS.includes(adminUser.id)){
     document.getElementById("deniedPanel").style.display="block";
   }else{
     document.getElementById("adminApp").style.display="block";
